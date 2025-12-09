@@ -1,0 +1,10 @@
+artifact_location: file:///C:/Users/leonb/Ironhack/ML/Projects/crypto-forecasting-project/mlruns/973940513731619295/models/m-595c2270e91f420ea4063cc8d2a3d2df/artifacts
+creation_timestamp: 1765317184618
+experiment_id: '973940513731619295'
+last_updated_timestamp: 1765317270197
+model_id: m-595c2270e91f420ea4063cc8d2a3d2df
+model_type: null
+name: model
+source_run_id: 32daa3aca9984bf592e643070a0af2b2
+status: 2
+status_message: null

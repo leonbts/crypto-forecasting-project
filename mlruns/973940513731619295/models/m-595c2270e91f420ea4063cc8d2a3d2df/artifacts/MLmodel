@@ -1,0 +1,30 @@
+artifact_path: file:///C:/Users/leonb/Ironhack/ML/Projects/crypto-forecasting-project/mlruns/973940513731619295/models/m-595c2270e91f420ea4063cc8d2a3d2df/artifacts
+flavors:
+  python_function:
+    data: data
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.tensorflow
+    python_version: 3.13.3
+  tensorflow:
+    code: null
+    data: data
+    keras_version: 2.20.0
+    model_type: keras
+    save_format: tf
+is_signature_from_type_hint: false
+mlflow_version: 3.5.1
+model_id: m-595c2270e91f420ea4063cc8d2a3d2df
+model_size_bytes: 474440
+model_uuid: m-595c2270e91f420ea4063cc8d2a3d2df
+prompts: null
+run_id: 32daa3aca9984bf592e643070a0af2b2
+signature:
+  inputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float64", "shape": [-1, 60,
+    18]}}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float32", "shape": [-1,
+    7]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2025-12-09 21:54:17.379422'

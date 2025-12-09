@@ -1,0 +1,11 @@
+pandas
+numpy
+requests
+matplotlib
+scikit-learn
+tensorflow
+prophet
+mlflow
+fastapi
+uvicorn
+python-dotenv

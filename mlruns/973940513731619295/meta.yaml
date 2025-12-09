@@ -1,0 +1,6 @@
+artifact_location: file:///C:/Users/leonb/Ironhack/ML/Projects/crypto-forecasting-project/mlruns/973940513731619295
+creation_time: 1765317184272
+experiment_id: '973940513731619295'
+last_update_time: 1765317184272
+lifecycle_stage: active
+name: crypto_lstm_forecasting
