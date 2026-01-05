@@ -12,18 +12,18 @@ ROLE_ARN = "arn:aws:iam::546602404979:role/sagemaker-crypto-training-role"
 BUCKET_NAME = "crypto-forecast-bucket"
 
 # S3 locations
-TRAIN_DATA_S3 = f"s3://{BUCKET_NAME}/processed/daily/"
+TRAIN_DATA_S3 = f"s3://{BUCKET_NAME}/processed/daily/backfill_daily_ohlcv.csv"
 OUTPUT_S3 = f"s3://{BUCKET_NAME}/models/sagemaker/"
 
-# Instance type for training
-INSTANCE_TYPE = "ml.m5.large"  # or "ml.m5.xlarge" if you want more power
+# Use the instance type where you already have limit
+INSTANCE_TYPE = "ml.m4.xlarge"
 
 # SageMaker region (must match your bucket region)
 REGION = "eu-central-1"
 
-# Framework settings
+# TensorFlow framework settings (2.x image with Keras)
 TF_FRAMEWORK_VERSION = "2.12"
-PYTHON_VERSION = "py39"
+PYTHON_VERSION = "py310"
 
 # Job name prefix
 BASE_JOB_NAME = "crypto-lstm-training"
@@ -41,13 +41,14 @@ def main():
     print(f"[INFO] Output S3: {OUTPUT_S3}")
 
     # SageMaker session & client
-    session = sagemaker.Session(boto3.Session(region_name=REGION))
+    boto_sess = boto3.Session(region_name=REGION)
+    session = sagemaker.Session(boto_session=boto_sess)
 
-    # Define hyperparameters (these are passed to argparse in train_lstm_sagemaker.py)
+    # Hyperparameters – must match parse_args() in train_lstm_sagemaker.py
     hyperparameters = {
         "window-size": 60,
         "horizon": 7,
-        "epochs": 20,
+        "epochs": 30,
         "batch-size": 64,
         "train-fraction": 0.7,
         "val-fraction": 0.15,
@@ -66,11 +67,9 @@ def main():
         hyperparameters=hyperparameters,
         output_path=OUTPUT_S3,
         base_job_name=BASE_JOB_NAME,
-        # Optional: use script mode, no training script in image itself
-        # script_mode is default in new SDKs, so we don't need to set it.
+        sagemaker_session=session,
     )
 
-    # Launch training
     print("[INFO] Starting SageMaker training job...")
     estimator.fit({"train": TRAIN_DATA_S3})
     print("[INFO] Training job submitted. Check the SageMaker console for status.")

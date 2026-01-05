@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+mlruns/
+mlflow.db
+data/
+models/
+awscliv2.zip
+aws/

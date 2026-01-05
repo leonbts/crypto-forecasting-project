@@ -21,7 +21,11 @@ def load_training_data(input_dir: str) -> pd.DataFrame:
     (Plus any extra features you decide to include later.)
     """
     input_path = Path(input_dir)
-    csv_files = list(input_path.glob("*.csv"))
+    csv_files = list(input_path.rglob("*.csv"))
+
+    print("[INFO] Found CSV files:")
+    for f in csv_files:
+        print(" -", f)
 
     if not csv_files:
         raise RuntimeError(f"No CSV files found in training channel: {input_dir}")
@@ -253,6 +257,7 @@ def parse_args():
     )
     parser.add_argument(
         "--model-dir",
+        "--model_dir",
         type=str,
         default=os.environ.get("SM_MODEL_DIR", "/opt/ml/model"),
     )
@@ -341,12 +346,14 @@ def main():
     print(f"[INFO] Test MAE: {test_mae:.6f}")
 
     # 9) Save model + scaler into model_dir (SageMaker will upload this to S3)
-    model_dir = Path(args.model_dir)
+    model_dir = Path(os.environ.get("SM_MODEL_DIR", "/opt/ml/model"))
     model_dir.mkdir(parents=True, exist_ok=True)
+    print("[DEBUG] SM_MODEL_DIR =", os.environ.get("SM_MODEL_DIR"))
 
-    model_path = model_dir / "lstm_model.keras"
-    model.save(model_path)
-    print(f"[INFO] Saved model to {model_path}")
+    # Save as TensorFlow SavedModel directory (most compatible with SageMaker packaging)
+    saved_model_dir = model_dir / "saved_model"
+    model.save(saved_model_dir)  # creates a folder with saved_model.pb + variables/
+    print(f"[INFO] Saved SavedModel to {saved_model_dir}")
 
     # Save scaler + metadata
     scaler_path = model_dir / "scaler_stats.npz"
@@ -360,6 +367,11 @@ def main():
         horizon=np.array([args.horizon]),
     )
     print(f"[INFO] Saved scaler stats to {scaler_path}")
+
+    # Extra sanity: list what ended up in SM_MODEL_DIR
+    print("[INFO] Contents of model_dir:")
+    for p in sorted(model_dir.rglob("*")):
+        print(" -", p)
 
 
 if __name__ == "__main__":
