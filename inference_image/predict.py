@@ -36,12 +36,12 @@ def load_model_and_scaler(model_dir: Path):
     maybe_extract_model_tar(model_dir)
 
     scaler_path = model_dir / "scaler_stats.npz"
-    saved_model_dir = model_dir / "saved_model"
+    keras_model_path = model_dir / "model.keras"
 
     if not scaler_path.exists():
         raise FileNotFoundError(f"Missing scaler_stats.npz in {model_dir}")
-    if not saved_model_dir.exists():
-        raise FileNotFoundError(f"Missing saved_model/ in {model_dir}")
+    if not keras_model_path.exists():
+        raise FileNotFoundError(f"Missing model.keras in {model_dir}")
 
     s = np.load(scaler_path, allow_pickle=True)
     mean = s["mean"]
@@ -50,7 +50,7 @@ def load_model_and_scaler(model_dir: Path):
     window_size = int(s["window_size"][0])
     horizon = int(s["horizon"][0])
 
-    model = tf.keras.models.load_model(saved_model_path)
+    model = tf.keras.models.load_model(keras_model_path)
     return model, mean, std, feature_cols, window_size, horizon
 
 
