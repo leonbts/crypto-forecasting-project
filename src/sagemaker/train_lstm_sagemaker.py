@@ -350,10 +350,10 @@ def main():
     model_dir.mkdir(parents=True, exist_ok=True)
     print("[DEBUG] SM_MODEL_DIR =", os.environ.get("SM_MODEL_DIR"))
 
-    # Save as TensorFlow SavedModel directory (most compatible with SageMaker packaging)
-    saved_model_dir = model_dir / "saved_model"
-    model.save(saved_model_dir)  # creates a folder with saved_model.pb + variables/
-    print(f"[INFO] Saved SavedModel to {saved_model_dir}")
+    # Save as TensorFlow Keras directory (most compatible with SageMaker packaging)
+    keras_model_path = model_dir / "model.keras"
+    model.save(keras_model_path)
+    print(f"[INFO] Saved Keras model to {keras_model_path}")
 
     # Save scaler + metadata
     scaler_path = model_dir / "scaler_stats.npz"

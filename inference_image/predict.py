@@ -65,6 +65,10 @@ def make_forecast_for_symbol(df: pd.DataFrame, symbol: str, model, mean, std, fe
     if df_sym.empty:
         raise RuntimeError(f"No rows for symbol {symbol} in input CSV")
 
+    # Feature-compat: some datasets use volumefrom/volumeto instead of volume
+    if "volume" not in df_sym.columns and "volumefrom" in df_sym.columns:
+        df_sym["volume"] = df_sym["volumefrom"]
+
     df_sym = df_sym.sort_values("date").copy()
     df_feat = add_basic_features(df_sym)
 
