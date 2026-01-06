@@ -2,8 +2,7 @@ FROM tensorflow/tensorflow:2.16.1
 
 WORKDIR /opt/program
 
-RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir pandas==2.2.2 numpy==1.26.4
+RUN python3 -m pip install --no-cache-dir --upgrade pip \
+ && python3 -m pip install --no-cache-dir pandas==2.2.2
 
 COPY predict.py /opt/program/predict.py
-

@@ -1,3 +1,4 @@
+from keras import initializers
 import os
 import argparse
 import json
@@ -51,7 +52,11 @@ def load_model_and_scaler(model_dir: Path):
     window_size = int(s["window_size"][0]) if "window_size" in s.files else int(os.environ.get("WINDOW_SIZE", "60"))
     horizon = int(s["horizon"][0]) if "horizon" in s.files else int(os.environ.get("HORIZON", "7"))
 
-    model = tf.keras.models.load_model(keras_model_path)
+    model = tf.keras.models.load_model(
+        keras_model_path,
+        safe_mode=False,
+        custom_objects={"Orthogonal": initializers.Orthogonal},
+    )
     return model, mean, std, feature_cols, window_size, horizon
 
 
