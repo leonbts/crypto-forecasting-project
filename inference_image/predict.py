@@ -47,8 +47,8 @@ def load_model_and_scaler(model_dir: Path):
     mean = s["mean"]
     std = s["std"]
     feature_cols = s["feature_cols"].tolist()
-    window_size = int(s["window_size"][0])
-    horizon = int(s["horizon"][0])
+    window_size = int(s["window_size"][0]) if "window_size" in s.files else int(os.environ.get("WINDOW_SIZE", "60"))
+    horizon = int(s["horizon"][0]) if "horizon" in s.files else int(os.environ.get("HORIZON", "7"))
 
     model = tf.keras.models.load_model(keras_model_path)
     return model, mean, std, feature_cols, window_size, horizon
