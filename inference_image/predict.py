@@ -3,12 +3,17 @@ import os
 import argparse
 import json
 import tarfile
+import csv
 from datetime import timedelta
 from pathlib import Path
+from io import StringIO
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import keras
+print("TF:", tf.__version__)
+print("Keras:", keras.__version__)
 
 
 def add_basic_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -91,6 +96,54 @@ def make_forecast_for_symbol(df: pd.DataFrame, symbol: str, model, mean, std, fe
     }
 
 
+def payload_to_csv_rows(payload: dict) -> list[dict]:
+    """
+    Flatten your payload into row-wise records for analytics tools.
+
+    Output columns are stable and dashboard-friendly.
+    """
+    base = {
+        "run_time_utc": payload.get("run_time_utc"),
+        "symbol": payload.get("symbol"),
+        "fiat": payload.get("fiat"),
+        "last_observed_date": payload.get("last_observed_date"),
+        "window_size": payload.get("window_size"),
+        "horizon": payload.get("horizon"),
+    }
+
+    rows = []
+    for i, pt in enumerate(payload.get("yhat", []), start=1):
+        rows.append({
+            **base,
+            "target_date": pt.get("date"),
+            "horizon_day": i,
+            "pred_close": pt.get("pred_close"),
+        })
+    return rows
+
+
+def write_csv(path, rows: list[dict]):
+    if not rows:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Fixed column order (helps Athena/QuickSight)
+    fieldnames = [
+        "run_time_utc", "symbol", "fiat",
+        "last_observed_date", "target_date",
+        "horizon", "horizon_day",
+        "window_size", "pred_close",
+    ]
+
+    buf = StringIO()
+    w = csv.DictWriter(buf, fieldnames=fieldnames)
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: r.get(k) for k in fieldnames})
+
+    path.write_text(buf.getvalue(), encoding="utf-8")
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--input-csv", required=True)
@@ -111,18 +164,28 @@ def main():
 
     run_time_utc = pd.Timestamp.utcnow().isoformat()
     all_payloads = []
+    missing = []
 
     for sym in symbols:
-        payload = make_forecast_for_symbol(
-            df=df,
-            symbol=sym,
-            model=model,
-            mean=mean,
-            std=std,
-            feature_cols=feature_cols,
-            window_size=window_size,
-            horizon=horizon,
-        )
+        try:
+            payload = make_forecast_for_symbol(
+                df=df,
+                symbol=sym,
+                model=model,
+                mean=mean,
+                std=std,
+                feature_cols=feature_cols,
+                window_size=window_size,
+                horizon=horizon,
+            )
+        except RuntimeError as e:
+            msg = str(e)
+            if "No rows for symbol" in msg:
+                print(f"[WARN] {msg} -> skipping {sym}")
+                missing.append(sym)
+                continue
+            raise  # anything else should still fail loudly
+
         payload.update({
             "fiat": "USD",
             "run_time_utc": run_time_utc,
@@ -133,10 +196,23 @@ def main():
 
         (output_dir / sym).mkdir(parents=True, exist_ok=True)
         (output_dir / sym / "latest.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        # NEW: also write a flat CSV for Athena/QuickSight
+        write_csv(output_dir / sym / "latest.csv", payload_to_csv_rows(payload))
         all_payloads.append(payload)
 
+    # Write global outputs
     (output_dir / "latest_all.json").write_text(json.dumps(all_payloads, indent=2), encoding="utf-8")
+    (output_dir / "missing_symbols.json").write_text(json.dumps(missing, indent=2), encoding="utf-8")
+
+    # NEW: global flat file across symbols (nice for Athena/QuickSight)
+    all_rows = []
+    for pld in all_payloads:
+        all_rows.extend(payload_to_csv_rows(pld))
+    write_csv(output_dir / "latest_all.csv", all_rows)
+
     print(json.dumps(all_payloads, indent=2))
+    if missing:
+        print(f"[WARN] Missing symbols skipped: {missing}")
 
 
 if __name__ == "__main__":
