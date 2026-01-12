@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
+import zipfile
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -105,7 +106,11 @@ def build_sequences_for_symbol(
         end_horizon = end_window + horizon
 
         x_seq = values[start:end_window, :]
-        y_seq = close_prices[end_window:end_horizon]
+
+        # NEW: returns as target (instead of absolute prices)
+        y_future = close_prices[end_window:end_horizon]
+        y_prev   = close_prices[end_window - 1 : end_horizon - 1]
+        y_seq = (y_future - y_prev) / (y_prev + 1e-12)
 
         X_list.append(x_seq)
         Y_list.append(y_seq)
@@ -277,6 +282,14 @@ def parse_args():
 
 
 def main():
+    import tensorflow as tf
+    print("[DEBUG] TF version:", tf.__version__)
+    try:
+        import keras
+        print("[DEBUG] Keras version:", keras.__version__)
+    except Exception as e:
+        print("[DEBUG] Standalone keras not available:", e)
+
     args = parse_args()
     print("[INFO] Training arguments:", args)
 
@@ -352,8 +365,9 @@ def main():
 
     # Save as TensorFlow Keras directory (most compatible with SageMaker packaging)
     keras_model_path = model_dir / "model.keras"
-    model.save(keras_model_path)
+    model.save(str(keras_model_path), save_format="keras")
     print(f"[INFO] Saved Keras model to {keras_model_path}")
+    print("[DEBUG] is_zipfile:", zipfile.is_zipfile(str(keras_model_path)))
 
     # Save scaler + metadata
     scaler_path = model_dir / "scaler_stats.npz"

@@ -23,6 +23,7 @@ layers/
 # ML artifacts & outputs
 # -------------------------------------------------
 models/
+inference_image/sm
 data/
 local_out/
 mlruns/

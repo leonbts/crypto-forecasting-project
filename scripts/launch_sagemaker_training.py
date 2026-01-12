@@ -16,13 +16,13 @@ TRAIN_DATA_S3 = f"s3://{BUCKET_NAME}/processed/daily/backfill_daily_ohlcv.csv"
 OUTPUT_S3 = f"s3://{BUCKET_NAME}/models/sagemaker/"
 
 # Use the instance type where you already have limit
-INSTANCE_TYPE = "ml.m4.xlarge"
+INSTANCE_TYPE = "ml.m5.large"
 
 # SageMaker region (must match your bucket region)
 REGION = "eu-central-1"
 
 # TensorFlow framework settings (2.x image with Keras)
-TF_FRAMEWORK_VERSION = "2.12"
+TF_FRAMEWORK_VERSION = "2.16"
 PYTHON_VERSION = "py310"
 
 # Job name prefix

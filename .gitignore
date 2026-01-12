@@ -18,6 +18,7 @@ __pycache__/
 # ML artifacts (never commit)
 # -------------------------------------------------
 models/
+inference_image/sm
 *.keras
 *.npz
 *.tar.gz

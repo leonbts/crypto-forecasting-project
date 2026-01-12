@@ -32,11 +32,26 @@ def add_basic_features(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(out, ignore_index=True).sort_values(["symbol", "date"]).reset_index(drop=True)
 
 
+# def maybe_extract_model_tar(model_dir: Path) -> None:
+#     tar_path = model_dir / "model.tar.gz"
+#     if tar_path.exists():
+#         with tarfile.open(tar_path, "r:gz") as tar:
+#             tar.extractall(path=model_dir)
+
 def maybe_extract_model_tar(model_dir: Path) -> None:
-    tar_path = model_dir / "model.tar.gz"
-    if tar_path.exists():
-        with tarfile.open(tar_path, "r:gz") as tar:
-            tar.extractall(path=model_dir)
+    # find the tarball anywhere under model_dir
+    candidates = list(model_dir.rglob("model.tar.gz"))
+    if not candidates:
+        candidates = list(model_dir.rglob("*.tar.gz"))
+    if not candidates:
+        print(f"[WARN] No .tar.gz found under {model_dir}")
+        return
+
+    tar_path = candidates[0]
+    print(f"[INFO] Extracting {tar_path} into {model_dir}")
+
+    with tarfile.open(tar_path, "r:gz") as tar:
+        tar.extractall(path=model_dir)
 
 
 def load_model_and_scaler(model_dir: Path):
@@ -82,17 +97,32 @@ def make_forecast_for_symbol(df: pd.DataFrame, symbol: str, model, mean, std, fe
         raise RuntimeError(f"Not enough rows for {symbol}: have {len(df_feat)}, need {window_size}")
 
     last_date = pd.to_datetime(df_feat["date"].iloc[-1])
+    last_close = float(df_feat["close"].iloc[-1])
+
     X_win = df_feat[feature_cols].iloc[-window_size:].to_numpy(dtype=np.float32)
     X_std = (X_win - mean) / (std + 1e-8)
     X_std = X_std[np.newaxis, :, :]
 
-    yhat = model.predict(X_std, verbose=0)[0].tolist()
+    # Model now predicts returns, not prices
+    rhat = model.predict(X_std, verbose=0)[0].astype(float).tolist()
+
     forecast_dates = [(last_date + timedelta(days=i)).date().isoformat() for i in range(1, horizon + 1)]
+
+    # Convert step-by-step returns -> absolute prices (compounded)
+    pred_prices = []
+    p = last_close
+    for r in rhat:
+        p = p * (1.0 + float(r))
+        pred_prices.append(p)
 
     return {
         "symbol": symbol,
         "last_observed_date": last_date.date().isoformat(),
-        "yhat": [{"date": d, "pred_close": float(v)} for d, v in zip(forecast_dates, yhat)],
+        "last_observed_close": last_close,
+        "yhat": [
+            {"date": d, "pred_return": float(r), "pred_close": float(pc)}
+            for d, r, pc in zip(forecast_dates, rhat, pred_prices)
+        ],
     }
 
 
@@ -117,6 +147,7 @@ def payload_to_csv_rows(payload: dict) -> list[dict]:
             **base,
             "target_date": pt.get("date"),
             "horizon_day": i,
+            "pred_return": pt.get("pred_return"),
             "pred_close": pt.get("pred_close"),
         })
     return rows
@@ -132,7 +163,7 @@ def write_csv(path, rows: list[dict]):
         "run_time_utc", "symbol", "fiat",
         "last_observed_date", "target_date",
         "horizon", "horizon_day",
-        "window_size", "pred_close",
+        "window_size", "pred_return", "pred_close",
     ]
 
     buf = StringIO()
